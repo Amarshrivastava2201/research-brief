@@ -10,7 +10,7 @@ Groq (llama-3.1-8b-instant model)
 
 ## What AI Was Used For
 - Generating structured research briefs
-- Prompt refinement
+- Prompt structuring
 - Handling JSON formatting issues
 - UI improvement suggestions
 
