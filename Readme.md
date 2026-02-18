@@ -4,7 +4,7 @@ A full-stack AI-powered web application that generates structured research brief
 
 ## 🚀 Live Links
 
-Frontend: https://researchbrief-3u7xs8mos-amar-shrivastavas-projects-0d0f0dd5.vercel.app/
+Frontend: https://researchbrief.vercel.app/
 
 Backend: https://researchbrief-gg0i.onrender.com/
 
