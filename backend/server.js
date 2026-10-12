@@ -16,11 +16,23 @@ app.use(cors({
 app.use(express.json());
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected"))
-  .catch(err => console.log("DB Error:", err));
+const mongoURI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/research_brief";
+mongoose.connect(mongoURI, { serverSelectionTimeoutMS: 5000 })
+  .then(() => console.log("MongoDB Connected successfully"))
+  .catch(async (err) => {
+    console.log("DB Error on primary URI:", err.message);
+    if (!mongoURI.includes("127.0.0.1") && !mongoURI.includes("localhost")) {
+      console.log("Falling back to local MongoDB at mongodb://127.0.0.1:27017/research_brief...");
+      try {
+        await mongoose.connect("mongodb://127.0.0.1:27017/research_brief", { serverSelectionTimeoutMS: 3000 });
+        console.log("Connected to local fallback MongoDB");
+      } catch (localErr) {
+        console.log("Local fallback also failed:", localErr.message);
+      }
+    }
+  });
 
-  const Research = require("./models/Research");
+const Research = require("./models/Research");
 
 
 // Basic test route

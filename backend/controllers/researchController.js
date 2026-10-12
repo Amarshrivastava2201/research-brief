@@ -45,23 +45,44 @@ try {
 }
 
 
-    const saved = await Research.create({
-      links,
-      summary: parsed.summary,
-      keyPoints: parsed.keyPoints,
-      conflicts: parsed.conflicts,
-      verifyChecklist: parsed.verifyChecklist,
-      tags: parsed.tags
-    });
+    const mongoose = require("mongoose");
+    let saved = null;
 
-    // Keep only last 5 reports
-const count = await Research.countDocuments();
+    if (mongoose.connection.readyState === 1) {
+      try {
+        saved = await Research.create({
+          links,
+          summary: parsed.summary,
+          keyPoints: parsed.keyPoints,
+          conflicts: parsed.conflicts,
+          verifyChecklist: parsed.verifyChecklist,
+          tags: parsed.tags
+        });
 
-if (count > 5) {
-  const oldest = await Research.findOne().sort({ createdAt: 1 });
-  await Research.findByIdAndDelete(oldest._id);
-}
+        // Keep only last 5 reports
+        const count = await Research.countDocuments();
+        if (count > 5) {
+          const oldest = await Research.findOne().sort({ createdAt: 1 });
+          if (oldest) await Research.findByIdAndDelete(oldest._id);
+        }
+      } catch (dbErr) {
+        console.warn("MongoDB save warning:", dbErr.message);
+      }
+    }
 
+    // Fallback if DB was unavailable: return the synthesized result so UI still gets the brief
+    if (!saved) {
+      saved = {
+        _id: "local_" + Date.now(),
+        links,
+        summary: parsed.summary,
+        keyPoints: parsed.keyPoints,
+        conflicts: parsed.conflicts,
+        verifyChecklist: parsed.verifyChecklist,
+        tags: parsed.tags,
+        createdAt: new Date().toISOString()
+      };
+    }
 
     res.json(saved);
 

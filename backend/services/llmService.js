@@ -7,12 +7,11 @@ const groq = new Groq({
 async function generateResearchBrief(contents) {
   try {
     const response = await groq.chat.completions.create({
-     model: "llama-3.1-8b-instant",
-
+      model: "openai/gpt-oss-20b",
       messages: [
         {
           role: "system",
-          content: "You are a research assistant. Return ONLY valid JSON. Do not include markdown, explanations, or extra text."
+          content: "You are an expert research analyst. Return ONLY a valid, complete JSON object. Keep summary concise (2-4 sentences). Provide 3-5 key points with concise snippet. Keep total JSON under 600 words."
         },
         {
           role: "user",
@@ -38,6 +37,7 @@ ${contents}
 `
         }
       ],
+      max_tokens: 1500,
       temperature: 0.2
     });
 
@@ -52,9 +52,9 @@ ${contents}
 async function checkLLMHealth() {
   try {
     await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+      model: "openai/gpt-oss-20b",
       messages: [{ role: "user", content: "ping" }],
-      max_tokens: 1
+      max_tokens: 50
     });
     return "Connected";
   } catch (error) {

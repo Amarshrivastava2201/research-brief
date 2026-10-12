@@ -1,19 +1,41 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import Navbar from "./components/Navbar";
+import Toast from "./components/Toast";
+import LinkManager from "./components/LinkManager";
+import ResearchBriefView from "./components/ResearchBriefView";
+import HistoryView from "./components/HistoryView";
+import StatusView from "./components/StatusView";
+import LoadingState from "./components/LoadingState";
+import { Zap, Shield, BookOpen, Terminal, Sparkles } from "lucide-react";
 
 function App() {
-  const [links, setLinks] = useState("");
+  const [links, setLinks] = useState([]);
   const [result, setResult] = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("home");
-  
+  const [serverOk, setServerOk] = useState(true);
+  const [toast, setToast] = useState(null);
 
-  const API = import.meta.env.VITE_API_URL;
+  const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+  const showToast = (type, title, message) => {
+    setToast({ type, title, message });
+    setTimeout(() => {
+      setToast(null);
+    }, 5000);
+  };
 
   const fetchHistory = async () => {
-    const res = await axios.get(`${API}/api/research`);
-    setHistory(res.data);
+    try {
+      const res = await axios.get(`${API}/api/research`);
+      setHistory(Array.isArray(res.data) ? res.data : []);
+      setServerOk(true);
+    } catch (err) {
+      console.error("Failed to fetch history:", err);
+      setServerOk(false);
+    }
   };
 
   useEffect(() => {
@@ -21,15 +43,13 @@ function App() {
   }, []);
 
   const handleSubmit = async () => {
-    if (!links.trim()) {
-      alert("Please enter at least one link.");
+    if (!links || links.length === 0) {
+      showToast("warning", "No inputs staged", "Please add at least 1 URL before generating.");
       return;
     }
 
-    const linkArray = links.split("\n").filter(l => l.trim() !== "");
-
-    if (linkArray.length > 5) {
-      alert("Maximum 5 links allowed.");
+    if (links.length > 5) {
+      showToast("warning", "Exceeded input limit", "Maximum 5 source links allowed per synthesis run.");
       return;
     }
 
@@ -38,259 +58,172 @@ function App() {
 
     try {
       const response = await axios.post(`${API}/api/research`, {
-        links: linkArray
+        links: links
       });
 
       setResult(response.data);
       fetchHistory();
       setActiveTab("home");
-
+      showToast("success", "Synthesis Complete", "Research brief generated and committed to vault.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
-      alert(error.response?.data?.error || "Something went wrong");
+      console.error("Submission error:", error);
+      const errMsg = error.response?.data?.error || error.message || "Failed to generate research brief.";
+      showToast("error", "Generation Failed", errMsg);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    setLoading(false);
+  const handleDeleteBrief = async (id) => {
+    try {
+      await axios.delete(`${API}/api/research/${id}`);
+      setHistory(prev => prev.filter(item => item._id !== id));
+      if (result && result._id === id) {
+        setResult(null);
+      }
+      showToast("info", "Record Deleted", "The research brief was removed from vault.");
+    } catch (err) {
+      console.error("Delete error:", err);
+      showToast("error", "Delete Failed", "Could not delete brief from server.");
+    }
+  };
+
+  const handleSelectHistoryItem = (item) => {
+    setResult(item);
+    setActiveTab("home");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleReset = () => {
+    setResult(null);
+    setLinks([]);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
+    <div className="min-h-screen bg-[#08080a] bg-grid-pattern text-zinc-100 flex flex-col font-sans selection:bg-cyan-400 selection:text-black">
+      {/* Toast Notification Container */}
+      <Toast toast={toast} onClose={() => setToast(null)} />
 
-        <h1 style={styles.title}>Research Brief Generator</h1>
+      {/* Top Navbar */}
+      <Navbar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        historyCount={history.length}
+        serverOk={serverOk}
+      />
 
-        {/* Tabs */}
-        <div style={styles.tabs}>
-          <button
-            style={activeTab === "home" ? styles.activeTab : styles.tab}
-            onClick={() => setActiveTab("home")}
-          >
-            Home
-          </button>
-
-          <button
-            style={activeTab === "history" ? styles.activeTab : styles.tab}
-            onClick={() => setActiveTab("history")}
-          >
-            History
-          </button>
-
-          <button
-            style={activeTab === "status" ? styles.activeTab : styles.tab}
-            onClick={() => setActiveTab("status")}
-          >
-            Status
-          </button>
-        </div>
-
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8">
         {/* HOME TAB */}
         {activeTab === "home" && (
-          <>
-            <textarea
-              rows="5"
-              placeholder="Paste up to 5 links (one per line)"
-              value={links}
-              onChange={(e) => setLinks(e.target.value)}
-              style={styles.textarea}
-            />
+          <div className="space-y-8">
+            {/* Hero Header (shown when no result or during loading) */}
+            {!result && !loading && (
+              <div className="text-center py-8 sm:py-12 max-w-2xl mx-auto space-y-4">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-400 text-xs font-mono font-semibold mb-1 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
+                  <Terminal className="w-3.5 h-3.5" />
+                  <span>CROSS-SOURCE INTELLIGENCE ENGINE</span>
+                </div>
+                
+                <h1 className="font-heading text-4xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
+                  Autonomous Web <span className="text-cyan-400 neon-text-glow">Research Synthesis</span>
+                </h1>
+                
+                <p className="text-xs sm:text-sm font-mono text-zinc-400 leading-relaxed max-w-xl mx-auto">
+                  Aggregate and cross-reference up to 5 sources. Scrapes live DOM, highlights evidence citations, detects factual contradictions, and builds an audit checklist.
+                </p>
 
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              style={styles.primaryButton}
-            >
-              {loading ? "Generating..." : "Generate Research"}
-            </button>
-
-            {result && (
-              <div style={styles.resultCard}>
-                <Section title="Summary">
-                  <p>{result.summary}</p>
-                </Section>
-
-                <Section title="Key Points">
-                  {result.keyPoints?.map((kp, i) => (
-                    <div key={i} style={styles.keyPoint}>
-                      <strong>{kp.point}</strong>
-                      <p><em>Source:</em> {kp.source}</p>
-                      <p><em>Snippet:</em> {kp.snippet}</p>
-                    </div>
-                  ))}
-                </Section>
-
-                <Section title="Conflicts">
-                  <ul>
-                    {result.conflicts?.map((c, i) => (
-                      <li key={i}>{c}</li>
-                    ))}
-                  </ul>
-                </Section>
-
-                <Section title="Verify Checklist">
-                  <ul>
-                    {result.verifyChecklist?.map((v, i) => (
-                      <li key={i}>{v}</li>
-                    ))}
-                  </ul>
-                </Section>
-
-                <Section title="Tags">
-                  <p>{result.tags?.join(", ")}</p>
-                </Section>
+                {/* Features pills */}
+                <div className="pt-2 flex flex-wrap items-center justify-center gap-3 text-xs font-mono text-zinc-400">
+                  <span className="flex items-center gap-1.5 px-3 py-1 rounded bg-[#0e0e12] border border-zinc-800">
+                    <Zap className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Real-time DOM Extraction</span>
+                  </span>
+                  <span className="flex items-center gap-1.5 px-3 py-1 rounded bg-[#0e0e12] border border-zinc-800">
+                    <Shield className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Contradiction Detection</span>
+                  </span>
+                  <span className="flex items-center gap-1.5 px-3 py-1 rounded bg-[#0e0e12] border border-zinc-800">
+                    <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Markdown Export</span>
+                  </span>
+                </div>
               </div>
             )}
-          </>
+
+            {/* Loading Pipeline State */}
+            {loading && (
+              <LoadingState linksCount={links.length} />
+            )}
+
+            {/* Result View or Link Manager */}
+            {!loading && (
+              <>
+                {result ? (
+                  <div className="space-y-6">
+                    <ResearchBriefView
+                      brief={result}
+                      onReset={handleReset}
+                      onShowToast={showToast}
+                    />
+
+                    {/* Secondary option to run another research with current or new links */}
+                    <div className="pt-6 border-t border-zinc-900 text-center">
+                      <button
+                        onClick={handleReset}
+                        className="text-xs font-mono text-cyan-400 hover:text-cyan-300 underline underline-offset-4 cursor-pointer"
+                      >
+                        ← Stage new sources for another synthesis run
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <LinkManager
+                    links={links}
+                    setLinks={setLinks}
+                    onSubmit={handleSubmit}
+                    loading={loading}
+                  />
+                )}
+              </>
+            )}
+          </div>
         )}
 
         {/* HISTORY TAB */}
         {activeTab === "history" && (
-          <div>
-            {history.map((item, i) => (
-              <div
-                key={i}
-                style={styles.historyCard}
-                onClick={() => {
-                  setResult(item);
-                  setActiveTab("home");
-                }}
-              >
-                <strong>
-                  {new Date(item.createdAt).toLocaleString()}
-                </strong>
-                <p>{item.summary.substring(0, 120)}...</p>
-              </div>
-            ))}
-          </div>
+          <HistoryView
+            history={history}
+            onSelectBrief={handleSelectHistoryItem}
+            onDeleteBrief={handleDeleteBrief}
+            onShowToast={showToast}
+          />
         )}
 
         {/* STATUS TAB */}
         {activeTab === "status" && (
-          <StatusSection API={API} />
+          <StatusView
+            API={API}
+            onStatusChange={(isOk) => setServerOk(isOk)}
+          />
         )}
+      </main>
 
-      </div>
-    </div>
-  );
-}
-
-function Section({ title, children }) {
-  return (
-    <div style={{ marginBottom: "20px" }}>
-      <h3 style={styles.sectionTitle}>{title}</h3>
-      {children}
-    </div>
-  );
-}
-
-function StatusSection({ API }) {
-  const [status, setStatus] = useState(null);
-
-  const checkStatus = async () => {
-    const res = await axios.get(`${API}/status`);
-    setStatus(res.data);
-  };
-
-  return (
-    <div>
-      <button style={styles.primaryButton} onClick={checkStatus}>
-        Check System Status
-      </button>
-
-      {status && (
-        <div style={styles.statusCard}>
-          <p><strong>Server:</strong> {status.server}</p>
-          <p><strong>Database:</strong> {status.database}</p>
-          <p><strong>LLM:</strong> {status.llm}</p>
+      {/* Footer */}
+      <footer className="border-t border-zinc-900/80 py-6 text-center text-xs font-mono text-zinc-600 bg-[#08080a]/80">
+        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p>© 2026 ResearchBrief AI. Multi-source research synthesis terminal.</p>
+          <div className="flex items-center gap-3 text-zinc-500">
+            <span className="text-cyan-400">Groq LPU Acceleration</span>
+            <span>•</span>
+            <span>Local MongoDB Store</span>
+          </div>
         </div>
-      )}
+      </footer>
     </div>
   );
 }
-
-const styles = {
-  page: {
-    background: "#f3f4f6",
-    minHeight: "100vh",
-    padding: "40px 20px",
-    display: "flex",
-    justifyContent: "center"
-  },
-  container: {
-    background: "white",
-    padding: "30px",
-    borderRadius: "12px",
-    width: "900px",
-    boxShadow: "0 8px 24px rgba(0,0,0,0.08)"
-  },
-  title: {
-    marginBottom: "20px"
-  },
-  tabs: {
-    display: "flex",
-    gap: "10px",
-    marginBottom: "20px"
-  },
-  tab: {
-    padding: "8px 16px",
-    border: "1px solid #ddd",
-    borderRadius: "6px",
-    background: "#f9fafb",
-    cursor: "pointer"
-  },
-  activeTab: {
-    padding: "8px 16px",
-    borderRadius: "6px",
-    background: "#2563eb",
-    color: "white",
-    border: "none",
-    cursor: "pointer"
-  },
-  textarea: {
-    width: "100%",
-    padding: "12px",
-    borderRadius: "6px",
-    border: "1px solid #ddd",
-    marginBottom: "15px"
-  },
-  primaryButton: {
-    background: "#2563eb",
-    color: "white",
-    padding: "10px 20px",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer"
-  },
-  resultCard: {
-    marginTop: "30px",
-    padding: "20px",
-    background: "#fafafa",
-    borderRadius: "10px"
-  },
-  keyPoint: {
-    background: "white",
-    padding: "10px",
-    borderRadius: "6px",
-    marginBottom: "10px",
-    border: "1px solid #eee"
-  },
-  historyCard: {
-    padding: "15px",
-    borderRadius: "8px",
-    background: "#f9fafb",
-    marginBottom: "10px",
-    cursor: "pointer",
-    border: "1px solid #eee"
-  },
-  statusCard: {
-    marginTop: "20px",
-    padding: "15px",
-    borderRadius: "8px",
-    background: "#f9fafb"
-  },
-  sectionTitle: {
-    borderBottom: "1px solid #eee",
-    paddingBottom: "5px",
-    marginBottom: "10px"
-  }
-};
 
 export default App;
