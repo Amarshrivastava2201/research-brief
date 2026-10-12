@@ -21,6 +21,30 @@ A high-performance full-stack AI research platform that ingests, cleans, cross-r
 
 ---
 
+## ⚡ Core Technical Features & Engineering Highlights
+
+### 1. Robust Multi-Source DOM Ingestion
+- **Anti-Bot Header Normalization:** Employs standard browser `User-Agent` and `Accept` headers to bypass 403 Forbidden blocks on sites like Wikipedia, Cloudflare-protected endpoints, and news outlets.
+- **Aggressive DOM Sanitization:** Utilizes `cheerio` to strip non-content elements (`<script>`, `<style>`, `<noscript>`, `<iframe>`), collapses extraneous whitespace, and normalizes raw text.
+- **Context Window Management:** Caps individual sources at 8,000 characters and combined multi-source payloads at 12,000 characters to prevent context window overflow and enforce predictable token throughput.
+
+### 2. High-Speed LPU Synthesis & Prompt Engineering
+- **Sub-Second Inference via Groq:** Powered by high-throughput LPU hardware running open weights models (`openai/gpt-oss-20b`), minimizing user wait time during multi-document synthesis.
+- **Strict Structured JSON Output:** Custom system prompts with bounded token limits and RegEx JSON block extractors guarantee valid schema output without hallucinatory markdown wrapping.
+- **Contradiction & Divergence Analyzer:** Specifically analyzes conflicting data points, disputed timeline dates, or divergent claims across input sources, surfacing them in a dedicated discrepancy alert section.
+
+### 3. Fault-Tolerant & Non-Blocking Persistence
+- **Resilient MongoDB Layer:** Uses connection state interrogation (`mongoose.connection.readyState`) with connection timeout safeguards. If the database experiences network latency or disconnects, the synthesis pipeline **does not crash**—the brief is delivered immediately to the client with an ephemeral ID.
+- **FIFO Rotation Capping:** Enforces a rolling window of the 5 most recent research briefs, automatically pruning older records upon new successful ingestions.
+
+### 4. UI & Technical Typography
+- **Design System:** Deep carbon palette (`#08080a`), electric cyan (`#00f0ff`) and emerald (`#10b981`) glow states, and subtle background grid lines.
+- **Dual Typography Hierarchy:** **Space Grotesk** for clean architectural headers and **JetBrains Mono** for claim numbers, telemetry readouts, quoted source snippets, and tag pills.
+- **Interactive Fact-Checking:** Client-side interactive audit checkboxes with real-time `X / Y Audited` verification counters.
+- **Multi-Format Export Pipeline:** In-browser Markdown generator (`formatBriefToMarkdown`), single-click clipboard copying with visual toast confirmation, `.md` file download, and print-ready stylesheet formatting.
+
+---
+
 ## 🏛 System Architecture
 
 ```mermaid
@@ -68,30 +92,6 @@ flowchart TD
     Controller -->|Structured JSON| RBV
     Health --> SV
 ```
-
----
-
-## ⚡ Core Technical Features & Engineering Highlights
-
-### 1. Robust Multi-Source DOM Ingestion
-- **Anti-Bot Header Normalization:** Employs standard browser `User-Agent` and `Accept` headers to bypass 403 Forbidden blocks on sites like Wikipedia, Cloudflare-protected endpoints, and news outlets.
-- **Aggressive DOM Sanitization:** Utilizes `cheerio` to strip non-content elements (`<script>`, `<style>`, `<noscript>`, `<iframe>`), collapses extraneous whitespace, and normalizes raw text.
-- **Context Window Management:** Caps individual sources at 8,000 characters and combined multi-source payloads at 12,000 characters to prevent context window overflow and enforce predictable token throughput.
-
-### 2. High-Speed LPU Synthesis & Prompt Engineering
-- **Sub-Second Inference via Groq:** Powered by high-throughput LPU hardware running open weights models (`openai/gpt-oss-20b`), minimizing user wait time during multi-document synthesis.
-- **Strict Structured JSON Output:** Custom system prompts with bounded token limits and RegEx JSON block extractors guarantee valid schema output without hallucinatory markdown wrapping.
-- **Contradiction & Divergence Analyzer:** Specifically analyzes conflicting data points, disputed timeline dates, or divergent claims across input sources, surfacing them in a dedicated discrepancy alert section.
-
-### 3. Fault-Tolerant & Non-Blocking Persistence
-- **Resilient MongoDB Layer:** Uses connection state interrogation (`mongoose.connection.readyState`) with connection timeout safeguards. If the database experiences network latency or disconnects, the synthesis pipeline **does not crash**—the brief is delivered immediately to the client with an ephemeral ID.
-- **FIFO Rotation Capping:** Enforces a rolling window of the 5 most recent research briefs, automatically pruning older records upon new successful ingestions.
-
-### 4. Cyberpunk Obsidian UI & Technical Typography
-- **Design System:** Deep carbon palette (`#08080a`), electric cyan (`#00f0ff`) and emerald (`#10b981`) glow states, and subtle background grid lines.
-- **Dual Typography Hierarchy:** **Space Grotesk** for clean architectural headers and **JetBrains Mono** for claim numbers, telemetry readouts, quoted source snippets, and tag pills.
-- **Interactive Fact-Checking:** Client-side interactive audit checkboxes with real-time `X / Y Audited` verification counters.
-- **Multi-Format Export Pipeline:** In-browser Markdown generator (`formatBriefToMarkdown`), single-click clipboard copying with visual toast confirmation, `.md` file download, and print-ready stylesheet formatting.
 
 ---
 
@@ -236,7 +236,3 @@ npm run dev
 4. Configure Environment Variable:
    - `VITE_API_URL`: `https://your-backend-app.onrender.com` (no trailing slash)
 
----
-
-## 📄 License
-This project is open-source and available under the [ISC License](LICENSE).
