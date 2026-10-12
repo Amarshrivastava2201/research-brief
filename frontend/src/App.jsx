@@ -218,7 +218,7 @@ function App() {
           <div className="flex items-center gap-3 text-zinc-500">
             <span className="text-cyan-400">Groq LPU Acceleration</span>
             <span>•</span>
-            <span>Local MongoDB Store</span>
+            <span>MongoDB Document Store</span>
           </div>
         </div>
       </footer>

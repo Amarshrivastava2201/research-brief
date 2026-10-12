@@ -126,12 +126,12 @@ export default function StatusView({ API, onStatusChange }) {
           </div>
           <div>
             <h3 className="font-heading font-bold text-white text-base">Database Store</h3>
-            <p className="text-xs font-mono text-zinc-400 mt-0.5">Local MongoDB 127.0.0.1</p>
+            <p className="text-xs font-mono text-zinc-400 mt-0.5">MongoDB Document Cluster</p>
           </div>
           <div className="pt-3 border-t border-zinc-800/80 text-xs font-mono text-zinc-400 space-y-1">
             <p className="flex justify-between">
-              <span>Host:</span>
-              <span className="text-zinc-300">mongodb://127.0.0.1:27017</span>
+              <span>Engine:</span>
+              <span className="text-zinc-300">MongoDB / Mongoose ODM</span>
             </p>
             <p className="flex justify-between">
               <span>Buffer:</span>
